@@ -1,0 +1,7 @@
+Python Flask Webservice that will give the total of your crypto wallets.
+
+Send wallet addresses via url params.
+
+Example
+
+?btc=&ltc=
