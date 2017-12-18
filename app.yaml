@@ -8,9 +8,6 @@ handlers:
 - url: /.*
   script: CryptoBalance.app
 
-env_variables:
-  cryptoid_key: '1a29b449d778'
-
 libraries:
 - name: ssl
   version: latest
