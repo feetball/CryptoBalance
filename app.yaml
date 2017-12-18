@@ -11,3 +11,6 @@ handlers:
 libraries:
 - name: ssl
   version: latest
+
+env_variables:
+  gae: 'true'
