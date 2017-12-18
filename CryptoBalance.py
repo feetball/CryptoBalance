@@ -1,12 +1,13 @@
 from flask import Flask, render_template, json, request
 import requests, pdb, ast, os
 import pprint
+import pdb
 
-import requests_toolbelt.adapters.appengine
+#import requests_toolbelt.adapters.appengine
 
 # Use the App Engine Requests adapter. This makes sure that Requests uses
 # URLFetch.
-requests_toolbelt.adapters.appengine.monkeypatch()
+#requests_toolbelt.adapters.appengine.monkeypatch()
 
 app = Flask(__name__)
 
@@ -24,8 +25,9 @@ def treat_as_plain_text(response):
 @app.route('/balance', methods=['GET'])
 def show_balance():
     price_dict = {}
-    balances = ""
-    coin_price_string = '\nCoin Prices: \n'
+    balances = 'Coin Values: \n---------------------- \n'
+    coin_price_string = '\nCoin Prices: \n---------------------- \n'
+    coin_qty_string = '\nCoin Quantities: \n---------------------- \n'
     total_balance = 0
 
     #print 'cryptoid key: ' + os.environ['cryptoid_key']
@@ -34,20 +36,23 @@ def show_balance():
     coin_prices = GetCoinPricesUSD()
 
     if request.args.get('btc'):
-        price_dict["btc"] =  GetCoinBalance('btc', request.args.get('btc'))
+        price_dict["btc"] = GetCoinBalance('btc', request.args.get('btc'))
     if request.args.get('ltc'):
         price_dict["ltc"] = GetCoinBalance('ltc', request.args.get('ltc'))
     if request.args.get('xrp'):
         price_dict["xrp"] = GetCoinBalance('xrp', request.args.get('xrp'))
+    if request.args.get('eth'):
+        price_dict["eth"] = GetCoinBalance('eth', request.args.get('eth'))
 
     #pdb.set_trace()
     if price_dict:
         for key, value in price_dict.items():
-            balances = balances + key + ' balance (USD): $' +  value + '\n'
-            total_balance = total_balance + float(value)
-            coin_price_string = coin_price_string + key + '(USD) $: ' + filter(lambda coin_price: coin_price['symbol'] == key.upper(), coin_prices)[0]['price_usd'] + '\n'
+            balances = balances + key + ' balance (USD): $' +  value[1] + '\n'
+            total_balance = total_balance + float(value[1])
+            coin_price_string = coin_price_string + key + '(USD): $' + filter(lambda coin_price: coin_price['symbol'] == key.upper(), coin_prices)[0]['price_usd'] + '\n'
+            coin_qty_string = coin_qty_string + key + ': ' + value[0] +'\n'
 
-        balances = balances + 'Total Balance (USD): $' + str(total_balance) + '\n' + coin_price_string         
+        balances = balances + 'Total Balance (USD): $' + str(total_balance) + '\n' + coin_qty_string + coin_price_string
 
     else:
         return 'No valid wallet addresses privided'
@@ -63,18 +68,21 @@ def GetCoinBalance(coinName, walletAddr):
         coin_balance_request = ast.literal_eval(requests.get(url).text)
         if coin_balance_request['result'] in 'success':
             coin_balance = float(coin_balance_request['account_data']['initial_balance'])
-
+    elif coinName == 'eth':
+        key =  os.environ['etherscan_key']
+        url = 'https://api.etherscan.io/api?module=account&action=balance&tag=latest&apikey=' + key + '&address=' + walletAddr
+        coin_balance = float(ast.literal_eval(requests.get(url).text)['result'])/10e18
     else:
         key = 'key=' + os.environ['cryptoid_key']
         url = 'https://chainz.cryptoid.info/' + coinName + '/api.dws?q=getbalance&' + key + '&a=' + walletAddr
         coin_balance = float(requests.get(url).text)
 
-
+    #pdb.set_trace()
     floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == coinName.upper(), coin_prices)[0]['price_usd'])
 
     balance = coin_balance * floatPrice
 
-    return str(balance)
+    return str(coin_balance), str(balance)
 
 
 def GetCoinPricesUSD():
