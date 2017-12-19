@@ -24,7 +24,6 @@ def treat_as_plain_text(response):
     response.headers["content-type"] = "text/plain"
     return response
 
-
 @app.route('/balance', methods=['GET'])
 def show_balance():
     price_dict = {}
@@ -35,17 +34,21 @@ def show_balance():
 
     #print 'cryptoid key: ' + os.environ['cryptoid_key']
 
-    global coin_prices 
+    global coin_prices
     coin_prices = GetCoinPricesUSD()
 
     if request.args.get('btc'):
-        price_dict["btc"] = GetCoinBalance('btc', request.args.get('btc'))
+        price_dict['btc'] = GetCoinBalance('btc', request.args.get('btc'))
     if request.args.get('ltc'):
-        price_dict["ltc"] = GetCoinBalance('ltc', request.args.get('ltc'))
+        price_dict['ltc'] = GetCoinBalance('ltc', request.args.get('ltc'))
     if request.args.get('xrp'):
-        price_dict["xrp"] = GetCoinBalance('xrp', request.args.get('xrp'))
+        price_dict['xrp'] = GetXrpBalance(request.args.get('xrp'))
     if request.args.get('eth'):
-        price_dict["eth"] = GetCoinBalance('eth', request.args.get('eth'))
+        price_dict['eth'] = GetEthBalance(request.args.get('eth'))
+    if request.args.get('zec'):
+        price_dict['zec'] = GetZecBalance(request.args.get('zec'))
+    if request.args.get('dcr'):
+        price_dict['dcr'] = GetDcrBalance(request.args.get('dcr'))
 
     #pdb.set_trace()
     if price_dict:
@@ -62,34 +65,51 @@ def show_balance():
 
     return balances
 
-
 def GetCoinBalance(coinName, walletAddr):
-
-    if coinName == 'xrp' :
-        url = 'https://data.ripple.com/v2/accounts/' + walletAddr
-        coin_balance_request = ast.literal_eval(requests.get(url).text)
-        if coin_balance_request['result'] in 'success':
-            coin_balance = float(coin_balance_request['account_data']['initial_balance'])
-    elif coinName == 'eth':
-        if 'gae' in os.environ:
-            key =  Settings.get('etherscan_key')
-        else:
-            key = os.environ['etherscan_key']
-        url = 'https://api.etherscan.io/api?module=account&action=balance&tag=latest&apikey=' + key + '&address=' + walletAddr
-        coin_balance = float(ast.literal_eval(requests.get(url).text)['result'])/10e18
+    if 'gae' in os.environ:
+        key = 'key=' + Settings.get('cryptoid_key')
     else:
-        if 'gae' in os.environ:
-            key = 'key=' + Settings.get('cryptoid_key')
-        else:
-            key = 'key=' + os.environ['cryptoid_key']
-        url = 'https://chainz.cryptoid.info/' + coinName + '/api.dws?q=getbalance&' + key + '&a=' + walletAddr
-        coin_balance = float(requests.get(url).text)
-
-    #pdb.set_trace()
+        key = 'key=' + os.environ['cryptoid_key']
+    url = 'https://chainz.cryptoid.info/' + coinName + '/api.dws?q=getbalance&' + key + '&a=' + walletAddr
+    coin_balance = float(requests.get(url).text)
     floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == coinName.upper(), coin_prices)[0]['price_usd'])
-
     balance = coin_balance * floatPrice
+    return str(coin_balance), str(balance)
 
+def GetEthBalance(walletAddr):
+    if 'gae' in os.environ:
+        key =  Settings.get('etherscan_key')
+    else:
+        key = os.environ['etherscan_key']
+    url = 'https://api.etherscan.io/api?module=account&action=balance&tag=latest&apikey=' + key + '&address=' + walletAddr
+    coin_balance = float(ast.literal_eval(requests.get(url).text)['result'])/10e18
+    floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'ETH', coin_prices)[0]['price_usd'])
+    balance = coin_balance * floatPrice
+    return str(coin_balance), str(balance)
+
+def GetXrpBalance(walletAddr):
+    url = 'https://data.ripple.com/v2/accounts/' + walletAddr
+    coin_balance_request = ast.literal_eval(requests.get(url).text)
+    if coin_balance_request['result'] in 'success':
+        coin_balance = float(coin_balance_request['account_data']['initial_balance'])
+    floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'XRP', coin_prices)[0]['price_usd'])
+    balance = coin_balance * floatPrice
+    return str(coin_balance), str(balance)
+
+def GetZecBalance(walletAddr):
+    url = 'https://api.zcha.in/v2/mainnet/accounts/' + walletAddr
+    request_data = ast.literal_eval(requests.get(url).text)
+    coin_balance = float(request_data['balance'])
+    floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'ZEC', coin_prices)[0]['price_usd'])
+    balance = coin_balance * floatPrice
+    return str(coin_balance), str(balance)
+    
+def GetDcrBalance(walletAddr):
+    url = 'https://mainnet.decred.org/api/addr/' + walletAddr + '/?noTxList=1'
+    request_data = ast.literal_eval(requests.get(url).text)
+    coin_balance = float(request_data['balance'])
+    floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'DCR', coin_prices)[0]['price_usd'])
+    balance = coin_balance * floatPrice
     return str(coin_balance), str(balance)
 
 
@@ -118,7 +138,7 @@ if 'gae' in os.environ:
                 retval.put()
             if retval.value == NOT_SET_VALUE:
                 raise Exception(('Setting %s not found in the database. A placeholder record has been created.' +
-                   ' Go to the Developers Console for your app in App Engine, look up the Settings record with ' + 
+                   ' Go to the Developers Console for your app in App Engine, look up the Settings record with ' +
                    'name=%s and enter its value in that records value field.') % (name, name))
             return retval.value
 
