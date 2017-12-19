@@ -82,7 +82,7 @@ def GetEthBalance(walletAddr):
     else:
         key = os.environ['etherscan_key']
     url = 'https://api.etherscan.io/api?module=account&action=balance&tag=latest&apikey=' + key + '&address=' + walletAddr
-    coin_balance = float(ast.literal_eval(requests.get(url).text)['result'])/10e18
+    coin_balance = float(ast.literal_eval(requests.get(url).text)['result'])/10e17
     floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'ETH', coin_prices)[0]['price_usd'])
     balance = coin_balance * floatPrice
     return str(coin_balance), str(balance)
