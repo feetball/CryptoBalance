@@ -98,6 +98,7 @@ def GetXrpBalance(walletAddr):
 
 def GetZecBalance(walletAddr):
     url = 'https://api.zcha.in/v2/mainnet/accounts/' + walletAddr
+    pdb.set_trace()
     request_data = ast.literal_eval(requests.get(url).text)
     coin_balance = float(request_data['balance'])
     floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'ZEC', coin_prices)[0]['price_usd'])
@@ -143,4 +144,4 @@ if 'gae' in os.environ:
             return retval.value
 
 if __name__ == "__main__":
-	app.run()
+	app.run(host='0.0.0.0')
