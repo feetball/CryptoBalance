@@ -88,10 +88,10 @@ def GetEthBalance(walletAddr):
     return str(coin_balance), str(balance)
 
 def GetXrpBalance(walletAddr):
-    url = 'https://data.ripple.com/v2/accounts/' + walletAddr
+    url = 'https://data.ripple.com/v2/accounts/' + walletAddr + '/stats/value?limit=1&descending=true'
     coin_balance_request = ast.literal_eval(requests.get(url).text)
     if coin_balance_request['result'] in 'success':
-        coin_balance = float(coin_balance_request['account_data']['initial_balance'])
+        coin_balance = float(coin_balance_request['rows'][0]['account_value'])
     floatPrice = float(filter(lambda coin_price: coin_price['symbol'] == 'XRP', coin_prices)[0]['price_usd'])
     balance = coin_balance * floatPrice
     return str(coin_balance), str(balance)
